@@ -1,4 +1,4 @@
-# Lambda_to_change_instance
+# Lambda to change instance type
 
 STEP 1. IAM ==> create ==> create policies in JSON ==> name : ModifyEc2Instance #name can we cay think
 
