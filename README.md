@@ -47,6 +47,8 @@ exports.handler = (event, context, callback) => {
         .catch(err => callback(err));
 };
 ```
+Under Basic settings change the time to 10 min. depend on the instance type
+
 
 STEP 4: Configure Test Events:--
 ```
