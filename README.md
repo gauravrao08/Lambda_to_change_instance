@@ -1,4 +1,4 @@
-# Lambda to change instance type
+# Lambda function to change aws ec2 instance type 
 
 STEP 1. IAM ==> create ==> create policies in JSON ==> name : ModifyEc2Instance #name can we cay think
 
