@@ -1,0 +1,68 @@
+import json
+import boto3
+import datetime
+
+client_resource = boto3.resource('ec2', region_name='ap-south-1')
+client = boto3.client('ec2', region_name='ap-south-1')
+now = datetime.datetime.now()
+
+def ami_create():
+    response = client_resource.instances.filter(Filters = [
+           {
+               'Name' : "tag-key",
+               'Values' : ["Backup-interval-hourly"]
+           },
+           {
+               'Name' : "tag-value",
+               'Values' : ["1-hour"]
+           }
+       ])
+    ec2_instances = list(response)
+    for instance in ec2_instances:
+        instance_name = [f["Value"] for f in instance.tags if f["Key"] == "Name"][0]
+        ami_name = instance_name + "_ami-" + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M")
+        ami_description = "AMI for instance - " + instance_name
+        ami_id = instance.create_image(Name=ami_name, Description=ami_description,NoReboot=True)
+        ami_id.create_tags(Tags=[
+            {'Key': 'Name', 'Value': instance_name},
+            {
+               'Key' : "Backup-interval-hourly",
+               'Value' : "1-hour"
+            },
+            ]
+        )
+
+def ami_delete():
+    response = client.describe_images(Filters=[
+            {
+               'Name' : "tag-key",
+               'Values' : ["Backup-interval-hourly"]
+            },
+             {
+               'Name' : "tag-value",
+               'Values' : ["1-hour"]
+           }
+        ] 
+    )
+    try:
+        for image in response['Images']:
+            ami_snapshot_id = []
+            image_id = image['ImageId']
+            image_creation_time = datetime.datetime.strptime(image['CreationDate'].split('T')[0],'%Y-%m-%d')
+            today = datetime.datetime.today()
+            retention = today - datetime.timedelta(days=2)
+            if image_creation_time < retention:
+                ami_snapshots = image['BlockDeviceMappings']
+                for ami_snaps in ami_snapshots:
+                    if 'Ebs' in ami_snaps:
+                        ami_snapshot_id.append(ami_snaps['Ebs']['SnapshotId'])
+                client.deregister_image(ImageId = image_id)
+                print image_id
+                for ami_snap_id in ami_snapshot_id:
+                    client.delete_snapshot(SnapshotId = ami_snap_id)
+    except Exception as e:
+        print e
+
+def lambda_handler(event, cont):
+    ami_create()
+    ami_delete()
