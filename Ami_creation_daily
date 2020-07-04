@@ -1,0 +1,30 @@
+import boto3
+import datetime
+import time
+
+def lambda_handler(event, context):
+    try:
+        region = 'ap-south-1'
+        topic_arn='arn:aws:sns:ap-south-1:313131331312313:name-ami-alert'
+        backupTagKey = "Backup-interval-daily"
+        backupTagValue = "1-day"
+        client = boto3.client('sns')
+        ec2 = boto3.resource('ec2', region_name=region)
+        # Set filters according to envronment
+        filters = [{'Name': 'instance-state-name','Values': ['running']},{'Name': 'tag:' + backupTagKey, 'Values': [backupTagValue]}]
+        prodinstances = list(ec2.instances.filter(Filters=filters))
+        for instance in prodinstances:
+            instanceName = [f["Value"] for f in instance.tags if f["Key"] == "Name"][0]
+            print instanceName
+            amiName = instanceName + "_ami-" + datetime.datetime.now().strftime("%Y-%m-%d")
+            amiDescription = "AMI for instance - " + instanceName
+            ami = instance.create_image(Name=amiName, Description=amiDescription,NoReboot=True)
+            ami_id = ami.id
+            print ami.id
+            ami.create_tags(Tags=[{'Key': 'InstanceName','Value': instanceName},{'Key':'Delete','Value':'YES'}])
+   #         response = client.publish(TopicArn=topic_arn,Message='Gaadi AMI Creation Failed for Instance:'+instanceName+'. Please check',Subject='Cardekho AMI Creation Failed')
+        return str(prodinstances), "Gaadi | Ami Creation Successful."
+    except Exception as e:
+        response = client.publish(TopicArn=topic_arn,Message='Gaadi AMI Creation Failed for Instance:'+instanceName+'. Please check',Subject='Cardekho AMI Creation Failed')
+        return str(e), "Gaadi | Ami Creation Failed."
+    
