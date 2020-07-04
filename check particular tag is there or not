@@ -1,0 +1,22 @@
+import boto3   
+import collections     
+import datetime     
+import time     
+import sys 
+
+ec = boto3.client('ec2', 'ap-south-1')     
+ec2 = boto3.resource('ec2', 'ap-south-1')     
+
+
+def lambda_handler(event, context):           
+    instance_ids = []
+    reservations = ec.describe_instances().get('Reservations', [])
+    for reservation in reservations:
+        for instance in reservation['Instances']:
+            tags = {}
+            for tag in instance['Tags']:
+                tags[tag['Key']] = tag['Value']
+            if not 'tag_name' in tags:
+                print (instance['InstanceId'] + " Dont have have tag_name tag")
+            #elif 'tag_name' in tags:
+                #print (instance['InstanceId'] + "have  tag_name tag")
